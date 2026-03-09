@@ -63,19 +63,21 @@ Every domain entity should be scoped to a company and company boundaries must be
 
 2. Keep contracts synchronized.
 If you change schema/API behavior, update all impacted layers:
+
 - `packages/db` schema and exports
 - `packages/shared` types/constants/validators
 - `server` routes/services
 - `ui` API clients and pages
 
-3. Preserve control-plane invariants.
+1. Preserve control-plane invariants.
+
 - Single-assignee task model
 - Atomic issue checkout semantics
 - Approval gates for governed actions
 - Budget hard-stop auto-pause behavior
 - Activity logging for mutating actions
 
-4. Do not replace strategic docs wholesale unless asked.
+1. Do not replace strategic docs wholesale unless asked.
 Prefer additive updates. Keep `doc/SPEC.md` and `doc/SPEC-implementation.md` aligned.
 
 ## 6. Database Change Workflow
@@ -90,13 +92,14 @@ When changing data model:
 pnpm db:generate
 ```
 
-4. Validate compile:
+1. Validate compile:
 
 ```sh
 pnpm -r typecheck
 ```
 
 Notes:
+
 - `packages/db/drizzle.config.ts` reads compiled schema from `dist/schema/*.js`
 - `pnpm db:generate` compiles `packages/db` first
 
@@ -140,3 +143,14 @@ A change is done when all are true:
 2. Typecheck, tests, and build pass
 3. Contracts are synced across db/shared/server/ui
 4. Docs updated when behavior or commands change
+
+## 11. Security Rules
+
+These rules are mandatory and must never be bypassed:
+
+- **No secrets in source code.** API keys, tokens, passwords, and secrets must only live in environment variables (`.env` on the server). Never hardcode them. Never commit `.env`, `.env.save`, or `.env.local` files.
+- **Deployment mode.** Production deployments must use `PAPERCLIP_DEPLOYMENT_MODE=authenticated`. The `local_trusted` mode grants full admin access with no authentication — it must never be used on a public server.
+- **Database not exposed.** PostgreSQL must never be port-forwarded to the public internet. It is only accessible inside the Docker network.
+- **Server-side authorization.** All access control must be enforced server-side via `assertBoard`, `assertCompanyAccess`, or equivalent. Never rely on UI-only checks.
+- **MIME validation.** File uploads must be validated using magic-number detection (`file-type`), not the client-declared `Content-Type`.
+- **No stack traces in responses.** Errors returned to clients must never include stack traces or internal details. Use the `errorHandler` middleware.

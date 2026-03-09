@@ -32,6 +32,11 @@ server/src/**/*.d.ts
 server/src/**/*.d.ts.map
 tmp/
 
+# Env files with secrets — never commit these
+.env.save
+.env.local
+.env.*.local
+
 # Editor / tool temp files
 *.tmp
 .vscode/

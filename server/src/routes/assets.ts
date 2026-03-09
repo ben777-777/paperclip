@@ -1,10 +1,20 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
+import { fileTypeFromBuffer } from "file-type";
 import type { Db } from "@paperclipai/db";
 import { createAssetImageMetadataSchema } from "@paperclipai/shared";
 import type { StorageService } from "../storage/types.js";
 import { assetService, logActivity } from "../services/index.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
+
+// Security: sanitize filename to prevent Content-Disposition header injection (V-06)
+function sanitizeFilename(name: string): string {
+  return name
+    .replace(/[\r\n\0]/g, "")          // remove CR, LF, null bytes
+    .replace(/[^\w\s.\-()[\]]/g, "_")   // keep safe chars only
+    .replace(/\s+/g, "_")
+    .slice(0, 255) || "asset";
+}
 
 const MAX_ASSET_IMAGE_BYTES = Number(process.env.PAPERCLIP_ATTACHMENT_MAX_BYTES) || 10 * 1024 * 1024;
 const ALLOWED_IMAGE_CONTENT_TYPES = new Set([
@@ -56,9 +66,11 @@ export function assetRoutes(db: Db, storage: StorageService) {
       return;
     }
 
-    const contentType = (file.mimetype || "").toLowerCase();
+    // Security: validate MIME type using magic number, not client-declared Content-Type (V-07)
+    const detectedType = await fileTypeFromBuffer(file.buffer);
+    const contentType = detectedType?.mime?.toLowerCase() ?? "";
     if (!ALLOWED_IMAGE_CONTENT_TYPES.has(contentType)) {
-      res.status(422).json({ error: `Unsupported image type: ${contentType || "unknown"}` });
+      res.status(422).json({ error: `Unsupported or undetectable image type: ${contentType || "unknown"}` });
       return;
     }
     if (file.buffer.length <= 0) {
@@ -139,8 +151,10 @@ export function assetRoutes(db: Db, storage: StorageService) {
     res.setHeader("Content-Type", asset.contentType || object.contentType || "application/octet-stream");
     res.setHeader("Content-Length", String(asset.byteSize || object.contentLength || 0));
     res.setHeader("Cache-Control", "private, max-age=60");
-    const filename = asset.originalFilename ?? "asset";
-    res.setHeader("Content-Disposition", `inline; filename=\"${filename.replaceAll("\"", "")}\"`);
+    // Security: sanitize filename to prevent header injection (V-06)
+    const rawFilename = asset.originalFilename ?? "asset";
+    const filename = sanitizeFilename(rawFilename);
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
 
     object.stream.on("error", (err) => {
       next(err);

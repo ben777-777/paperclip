@@ -232,6 +232,26 @@ See [doc/DEVELOPING.md](doc/DEVELOPING.md) for the full development guide.
 
 <br/>
 
+## Security
+
+Paperclip is designed for self-hosted deployment. When running on a public VPS:
+
+- **Use `authenticated` mode** — always set `PAPERCLIP_DEPLOYMENT_MODE=authenticated` in production. Never run `local_trusted` on an exposed server.
+- **Set a strong `BETTER_AUTH_SECRET`** — generate with `openssl rand -base64 32`. Never commit `.env` files.
+- **Database** — PostgreSQL is not exposed externally. Do not publish port 5432.
+- **Copy `.env.example`** — fill in all `CHANGE_MOI` values before first `docker compose up`.
+
+```bash
+# Generate secrets on your VPS
+cp .env.example .env
+openssl rand -base64 32   # → BETTER_AUTH_SECRET
+openssl rand -base64 24   # → POSTGRES_PASSWORD
+```
+
+See [doc/DEVELOPING.md](doc/DEVELOPING.md) for deployment details.
+
+<br/>
+
 ## Roadmap
 
 - ⚪ Get OpenClaw onboarding easier
