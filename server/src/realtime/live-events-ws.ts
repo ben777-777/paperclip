@@ -79,6 +79,16 @@ function parseBearerToken(rawAuth: string | string[] | undefined) {
   return token.length > 0 ? token : null;
 }
 
+export function safeRequestPathForLogs(rawUrl: string | undefined) {
+  if (!rawUrl) return "/";
+  try {
+    return new URL(rawUrl, "http://localhost").pathname;
+  } catch {
+    const [pathOnly] = rawUrl.split("?");
+    return pathOnly || "/";
+  }
+}
+
 function headersFromIncomingMessage(req: IncomingMessage): Headers {
   const headers = new Headers();
   for (const [key, raw] of Object.entries(req.headers)) {
@@ -92,19 +102,17 @@ function headersFromIncomingMessage(req: IncomingMessage): Headers {
   return headers;
 }
 
-async function authorizeUpgrade(
+export async function authorizeUpgrade(
   db: Db,
   req: IncomingMessage,
   companyId: string,
-  url: URL,
   opts: {
     deploymentMode: DeploymentMode;
     resolveSessionFromHeaders?: (headers: Headers) => Promise<BetterAuthSessionResult | null>;
   },
 ): Promise<UpgradeContext | null> {
-  const queryToken = url.searchParams.get("token")?.trim() ?? "";
   const authToken = parseBearerToken(req.headers.authorization);
-  const token = authToken ?? (queryToken.length > 0 ? queryToken : null);
+  const token = authToken;
 
   // Browser board context has no bearer token in local_trusted and authenticated modes.
   if (!token) {
@@ -246,7 +254,7 @@ export function setupLiveEventsWebSocketServer(
       return;
     }
 
-    void authorizeUpgrade(db, req, companyId, url, {
+    void authorizeUpgrade(db, req, companyId, {
       deploymentMode: opts.deploymentMode,
       resolveSessionFromHeaders: opts.resolveSessionFromHeaders,
     })
@@ -264,7 +272,7 @@ export function setupLiveEventsWebSocketServer(
         });
       })
       .catch((err) => {
-        logger.error({ err, path: req.url }, "failed websocket upgrade authorization");
+        logger.error({ err, path: safeRequestPathForLogs(req.url) }, "failed websocket upgrade authorization");
         rejectUpgrade(socket, "500 Internal Server Error", "upgrade failed");
       });
   });
