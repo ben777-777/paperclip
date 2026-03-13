@@ -196,6 +196,8 @@ This starts the API server at `http://localhost:3100`. An embedded PostgreSQL da
 ./start --build -d   # build, then run in background
 ```
 
+The first time you open the app, create the first admin: run `pnpm paperclipai auth bootstrap-ceo --db-url "postgres://paperclip:YOUR_POSTGRES_PASSWORD@localhost:5432/paperclip" --base-url "http://localhost:3100"` from the repo (see [Docker docs](doc/DOCKER.md) for details).
+
 > **Requirements:** Node.js 20+, pnpm 9.15+ (or Docker for `./start`)
 
 <br/>

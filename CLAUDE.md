@@ -118,6 +118,8 @@ pnpm db:generate      # Generate DB migration after schema change
 pnpm db:migrate       # Apply migrations
 ```
 
+**Docker first admin:** After `./start`, if the UI shows "Instance setup required", run from the host (with Postgres port 5432 exposed): `pnpm paperclipai auth bootstrap-ceo --db-url "postgres://paperclip:YOUR_POSTGRES_PASSWORD@localhost:5432/paperclip" --base-url "http://localhost:3100"`. See `doc/DOCKER.md` for details.
+
 ## Core Engineering Rules
 
 ### 1. Company-scoped everything
@@ -236,6 +238,7 @@ A change is **done** when:
 | `PAPERCLIP_INSTANCE_ID`     | Override instance identifier                    | `default`       |
 | `PAPERCLIP_SECRETS_STRICT_MODE` | Require secret refs for sensitive env keys  | `false`         |
 | `PAPERCLIP_ENABLE_COMPANY_DELETION` | Allow company deletion                  | mode-dependent  |
+| `PAPERCLIP_PUBLIC_URL`             | Public URL for app/auth (Docker: e.g. `http://localhost:3100`) | compose default |
 
 ## Adapters (Bring Your Own Agent)
 
