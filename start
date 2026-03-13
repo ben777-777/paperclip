@@ -32,7 +32,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
     echo "  - BETTER_AUTH_SECRET (ex: openssl rand -base64 32)"
     echo ""
     read -r -p "Voulez-vous lancer Docker quand même ? (o/N) " reply
-    if [[ ! "${reply,,}" =~ ^o ]]; then
+    if [[ ! "$reply" =~ ^[oOyY] ]]; then
       exit 0
     fi
   fi
@@ -41,7 +41,7 @@ else
     echo "Attention: $ENV_FILE contient encore des valeurs 'CHANGE_MOI'."
     echo "Pour un déploiement sécurisé, définissez POSTGRES_PASSWORD et BETTER_AUTH_SECRET."
     read -r -p "Continuer quand même ? (o/N) " reply
-    if [[ ! "${reply,,}" =~ ^o ]]; then
+    if [[ ! "$reply" =~ ^[oOyY] ]]; then
       exit 0
     fi
   fi
@@ -65,7 +65,7 @@ for arg in "$@"; do
   esac
 done
 
-echo "Démarrage de PaperClip (Docker Compose)…”
+echo "Démarrage de PaperClip (Docker Compose)..."
 echo "Fichier Compose: $COMPOSE_FILE"
 echo ""
 

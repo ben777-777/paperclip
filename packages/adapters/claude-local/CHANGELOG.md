@@ -1,5 +1,11 @@
 # @paperclipai/adapter-claude-local
 
+## Unreleased
+
+### Patch Changes
+
+- Do not pass `--dangerously-skip-permissions` to the Claude CLI when the process runs as root (e.g. in Docker), to avoid CLI refusal and probe failures.
+
 ## 0.2.7
 
 ### Patch Changes

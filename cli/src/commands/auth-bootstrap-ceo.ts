@@ -56,12 +56,15 @@ export async function bootstrapCeoInvite(opts: {
   const configPath = resolveConfigPath(opts.config);
   loadPaperclipEnvFile(configPath);
   const config = readConfig(configPath);
-  if (!config) {
-    p.log.error(`No config found at ${configPath}. Run ${pc.cyan("paperclip onboard")} first.`);
+
+  // Docker / headless: allow bootstrap without config when --db-url and --base-url are both provided
+  const headlessBootstrap = !config && opts.dbUrl && opts.baseUrl;
+  if (!config && !headlessBootstrap) {
+    p.log.error(`No config found at ${configPath}. Run ${pc.cyan("paperclip onboard")} first, or use ${pc.cyan("--db-url")} and ${pc.cyan("--base-url")} for Docker/headless bootstrap.`);
     return;
   }
 
-  if (config.server.deploymentMode !== "authenticated") {
+  if (config && config.server.deploymentMode !== "authenticated") {
     p.log.info("Deployment mode is local_trusted. Bootstrap CEO invite is only required for authenticated mode.");
     return;
   }
@@ -120,7 +123,12 @@ export async function bootstrapCeoInvite(opts: {
     p.log.message(`Invite URL: ${pc.cyan(inviteUrl)}`);
     p.log.message(`Expires: ${pc.dim(created.expiresAt.toISOString())}`);
   } catch (err) {
-    p.log.error(`Could not create bootstrap invite: ${err instanceof Error ? err.message : String(err)}`);
-    p.log.info("If using embedded-postgres, start the Paperclip server and run this command again.");
+    const msg = err instanceof Error ? err.message : String(err);
+    p.log.error(`Could not create bootstrap invite: ${msg || "unknown error"}`);
+    if (opts.dbUrl && /connection refused|ECONNREFUSED|getaddrinfo/i.test(msg)) {
+      p.log.info("Database unreachable. If using Docker Compose, ensure the db service exposes port 5432 and the stack is running.");
+    } else {
+      p.log.info("If using embedded-postgres, start the Paperclip server and run this command again.");
+    }
   }
 }

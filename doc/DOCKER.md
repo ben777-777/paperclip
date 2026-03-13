@@ -44,6 +44,31 @@ PAPERCLIP_PORT=3200 PAPERCLIP_DATA_DIR=./data/pc docker compose -f docker-compos
 
 If you change host port or use a non-local domain, set `PAPERCLIP_PUBLIC_URL` to the external URL you will use in browser/auth flows.
 
+## First admin bootstrap (Compose with Postgres)
+
+When you run Paperclip with `docker-compose.yml` (Postgres + server) in authenticated mode, the first time you open the app it shows **Instance setup required** and asks you to run:
+
+```sh
+pnpm paperclipai auth bootstrap-ceo
+```
+
+That command creates a one-time invite URL. It must connect to the **same database** as the server. From your **host** (where you have the repo and the CLI), you can do either of the following.
+
+**Option A — Expose Postgres and use `--db-url` + `--base-url` (no config file):**
+
+1. Expose the Postgres port in `docker-compose.yml` (under the `db` service, add `ports: - "5432:5432"`). Or start Compose with a one-off override that publishes 5432.
+2. From the project root, using the same `POSTGRES_PASSWORD` as in your `.env`:
+
+```sh
+pnpm paperclipai auth bootstrap-ceo \
+  --db-url "postgres://paperclip:YOUR_POSTGRES_PASSWORD@localhost:5432/paperclip" \
+  --base-url "http://localhost:3100"
+```
+
+3. Open the printed invite URL in your browser to create the first instance admin. You can remove the `ports` mapping for `db` after bootstrap if you want to keep the database non-exposed.
+
+**Option B — With an existing config:** if you already have a Paperclip config (e.g. from `paperclipai onboard`) that points at the same instance and database, run `pnpm paperclipai auth bootstrap-ceo` as usual (with or without `-c /path/to/config.json`). You still need the CLI to reach Postgres (e.g. `DATABASE_URL` or config with the correct connection string and, if Postgres runs only in Docker, port 5432 exposed as above).
+
 ## Authenticated Compose (Single Public URL)
 
 For authenticated deployments, set one canonical public URL and let Paperclip derive auth/callback defaults:

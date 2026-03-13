@@ -6,11 +6,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
       POSTGRES_DB: paperclip
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paperclip} -d paperclip"]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-paperclip} -d paperclip" ]
       interval: 2s
       timeout: 5s
       retries: 30
-    # Port 5432 NOT exposed to the host — DB is only accessible inside Docker network
+    # Expose 5432 so the host CLI can run auth bootstrap-ceo (optional: remove after first admin created)
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 

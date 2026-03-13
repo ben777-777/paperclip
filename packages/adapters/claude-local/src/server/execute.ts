@@ -341,10 +341,12 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     context,
   });
 
+  // Claude CLI refuses --dangerously-skip-permissions when running as root (e.g. in Docker).
+  const isRoot = typeof process.getuid === "function" && process.getuid() === 0;
   const buildClaudeArgs = (resumeSessionId: string | null) => {
     const args = ["--print", "-", "--output-format", "stream-json", "--verbose"];
     if (resumeSessionId) args.push("--resume", resumeSessionId);
-    if (dangerouslySkipPermissions) args.push("--dangerously-skip-permissions");
+    if (dangerouslySkipPermissions && !isRoot) args.push("--dangerously-skip-permissions");
     if (chrome) args.push("--chrome");
     if (model) args.push("--model", model);
     if (effort) args.push("--effort", effort);

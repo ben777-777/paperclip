@@ -1,5 +1,11 @@
 # paperclipai
 
+## Unreleased
+
+### Patch Changes
+
+- `auth bootstrap-ceo`: add `--db-url`; allow headless/Docker bootstrap without config file when `--db-url` and `--base-url` are both provided. Clearer error when DB is unreachable (e.g. port 5432 not exposed).
+
 ## 0.2.7
 
 ### Patch Changes

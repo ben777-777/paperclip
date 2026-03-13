@@ -143,6 +143,7 @@ auth
   .option("--force", "Create new invite even if admin already exists", false)
   .option("--expires-hours <hours>", "Invite expiration window in hours", (value) => Number(value))
   .option("--base-url <url>", "Public base URL used to print invite link")
+  .option("--db-url <url>", "PostgreSQL connection string (for Docker/headless bootstrap without config)")
   .action(bootstrapCeoInvite);
 
 program.parseAsync().catch((err) => {
