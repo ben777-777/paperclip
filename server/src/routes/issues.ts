@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
+import { fileTypeFromBuffer } from "file-type";
 import type { Db } from "@paperclipai/db";
 import {
   addIssueCommentSchema,
@@ -26,6 +27,7 @@ import { logger } from "../middleware/logger.js";
 import { forbidden, HttpError, unauthorized } from "../errors.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
+import { sanitizeFilename } from "../utils/sanitize-filename.js";
 
 const MAX_ATTACHMENT_BYTES = Number(process.env.PAPERCLIP_ATTACHMENT_MAX_BYTES) || 10 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_CONTENT_TYPES = new Set([
@@ -1066,15 +1068,18 @@ export function issueRoutes(db: Db, storage: StorageService) {
       res.status(400).json({ error: "Missing file field 'file'" });
       return;
     }
-    const contentType = (file.mimetype || "").toLowerCase();
+    // Security: validate MIME by magic number, not client-declared Content-Type (V-02)
+    const detectedType = await fileTypeFromBuffer(file.buffer);
+    const contentType = detectedType?.mime?.toLowerCase() ?? "";
     if (!ALLOWED_ATTACHMENT_CONTENT_TYPES.has(contentType)) {
-      res.status(422).json({ error: `Unsupported attachment type: ${contentType || "unknown"}` });
+      res.status(422).json({ error: `Unsupported or undetectable attachment type: ${contentType || "unknown"}` });
       return;
     }
     if (file.buffer.length <= 0) {
       res.status(422).json({ error: "Attachment is empty" });
       return;
     }
+    const safeFilename = sanitizeFilename(file.originalname || "attachment");
 
     const parsedMeta = createIssueAttachmentMetadataSchema.safeParse(req.body ?? {});
     if (!parsedMeta.success) {
@@ -1086,7 +1091,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
     const stored = await storage.putFile({
       companyId,
       namespace: `issues/${issueId}`,
-      originalFilename: file.originalname || null,
+      originalFilename: safeFilename || null,
       contentType,
       body: file.buffer,
     });
@@ -1137,8 +1142,8 @@ export function issueRoutes(db: Db, storage: StorageService) {
     res.setHeader("Content-Type", attachment.contentType || object.contentType || "application/octet-stream");
     res.setHeader("Content-Length", String(attachment.byteSize || object.contentLength || 0));
     res.setHeader("Cache-Control", "private, max-age=60");
-    const filename = attachment.originalFilename ?? "attachment";
-    res.setHeader("Content-Disposition", `inline; filename=\"${filename.replaceAll("\"", "")}\"`);
+    const filename = sanitizeFilename(attachment.originalFilename ?? "attachment");
+    res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
 
     object.stream.on("error", (err) => {
       next(err);

@@ -4,6 +4,7 @@ import pino from "pino";
 import { pinoHttp } from "pino-http";
 import { readConfigFile } from "../config-file.js";
 import { resolveDefaultLogsDir, resolveHomeAwarePath } from "../home-paths.js";
+import { sanitizeRecord } from "../redaction.js";
 
 function resolveServerLogDir(): string {
   const envOverride = process.env.PAPERCLIP_LOG_DIR?.trim();
@@ -60,18 +61,27 @@ export const httpLogger = pinoHttp({
   customProps(req, res) {
     if (res.statusCode >= 400) {
       const ctx = (res as any).__errorContext;
+      // WHY V-03: never log stack or raw req body to avoid leaking paths and secrets in log sinks.
+      const safeError =
+        ctx?.error && typeof ctx.error === "object"
+          ? { message: ctx.error.message, name: ctx.error.name }
+          : undefined;
+      const safeReqBody =
+        ctx?.reqBody && typeof ctx.reqBody === "object" && !Array.isArray(ctx.reqBody)
+          ? sanitizeRecord(ctx.reqBody as Record<string, unknown>)
+          : ctx?.reqBody;
       if (ctx) {
         return {
-          errorContext: ctx.error,
-          reqBody: ctx.reqBody,
+          errorContext: safeError,
+          reqBody: safeReqBody,
           reqParams: ctx.reqParams,
           reqQuery: ctx.reqQuery,
         };
       }
       const props: Record<string, unknown> = {};
       const { body, params, query } = req as any;
-      if (body && typeof body === "object" && Object.keys(body).length > 0) {
-        props.reqBody = body;
+      if (body && typeof body === "object" && !Array.isArray(body) && Object.keys(body).length > 0) {
+        props.reqBody = sanitizeRecord(body);
       }
       if (params && typeof params === "object" && Object.keys(params).length > 0) {
         props.reqParams = params;

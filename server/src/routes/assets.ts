@@ -6,15 +6,7 @@ import { createAssetImageMetadataSchema } from "@paperclipai/shared";
 import type { StorageService } from "../storage/types.js";
 import { assetService, logActivity } from "../services/index.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
-
-// Security: sanitize filename to prevent Content-Disposition header injection (V-06)
-function sanitizeFilename(name: string): string {
-  return name
-    .replace(/[\r\n\0]/g, "")          // remove CR, LF, null bytes
-    .replace(/[^\w\s.\-()[\]]/g, "_")   // keep safe chars only
-    .replace(/\s+/g, "_")
-    .slice(0, 255) || "asset";
-}
+import { sanitizeFilename } from "../utils/sanitize-filename.js";
 
 const MAX_ASSET_IMAGE_BYTES = Number(process.env.PAPERCLIP_ATTACHMENT_MAX_BYTES) || 10 * 1024 * 1024;
 const ALLOWED_IMAGE_CONTENT_TYPES = new Set([
