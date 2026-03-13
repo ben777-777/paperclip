@@ -106,6 +106,7 @@ pnpm dev
 ## Key Commands
 
 ```sh
+./start               # Docker: Postgres + server (from repo root; needs .env)
 pnpm dev              # Full dev (API + UI, watch mode)
 pnpm dev:once         # Dev without file watching
 pnpm dev:server       # Server only

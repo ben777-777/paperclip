@@ -188,7 +188,15 @@ pnpm dev
 
 This starts the API server at `http://localhost:3100`. An embedded PostgreSQL database is created automatically — no setup required.
 
-> **Requirements:** Node.js 20+, pnpm 9.15+
+**With Docker (Postgres + server):**
+
+```bash
+# Configure .env (POSTGRES_PASSWORD, BETTER_AUTH_SECRET) then:
+./start              # foreground
+./start --build -d   # build, then run in background
+```
+
+> **Requirements:** Node.js 20+, pnpm 9.15+ (or Docker for `./start`)
 
 <br/>
 

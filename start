@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# =============================================================================
+# PaperClip — Démarrage Docker (Postgres + serveur)
+# Usage: ./start [--build] [--detach]
+# =============================================================================
+
+set -e
+cd "$(dirname "$0")"
+
+COMPOSE_FILE="docker-compose.yml"
+ENV_FILE=".env"
+
+# --- Vérifications ---
+if ! command -v docker &>/dev/null; then
+  echo "Erreur: Docker n'est pas installé ou pas dans le PATH."
+  exit 1
+fi
+
+if ! docker compose version &>/dev/null 2>&1; then
+  echo "Erreur: Docker Compose (v2) n'est pas disponible. Lancez: docker compose version"
+  exit 1
+fi
+
+# --- Fichier .env ---
+if [[ ! -f "$ENV_FILE" ]]; then
+  if [[ -f .env.example ]]; then
+    cp .env.example "$ENV_FILE"
+    echo "Fichier $ENV_FILE créé à partir de .env.example."
+    echo ""
+    echo "À faire: éditez $ENV_FILE et définissez au minimum:"
+    echo "  - POSTGRES_PASSWORD  (ex: openssl rand -base64 24)"
+    echo "  - BETTER_AUTH_SECRET (ex: openssl rand -base64 32)"
+    echo ""
+    read -r -p "Voulez-vous lancer Docker quand même ? (o/N) " reply
+    if [[ ! "${reply,,}" =~ ^o ]]; then
+      exit 0
+    fi
+  fi
+else
+  if grep -q "CHANGE_MOI" "$ENV_FILE" 2>/dev/null; then
+    echo "Attention: $ENV_FILE contient encore des valeurs 'CHANGE_MOI'."
+    echo "Pour un déploiement sécurisé, définissez POSTGRES_PASSWORD et BETTER_AUTH_SECRET."
+    read -r -p "Continuer quand même ? (o/N) " reply
+    if [[ ! "${reply,,}" =~ ^o ]]; then
+      exit 0
+    fi
+  fi
+fi
+
+# --- Arguments ---
+BUILD=""
+DETACH=""
+for arg in "$@"; do
+  case "$arg" in
+    --build)  BUILD="--build" ;;
+    -b)       BUILD="--build" ;;
+    --detach) DETACH="-d" ;;
+    -d)       DETACH="-d" ;;
+    -h|--help)
+      echo "Usage: ./start [--build] [--detach]"
+      echo "  --build, -b   Reconstruire les images avant de lancer"
+      echo "  --detach, -d Démarrer en arrière-plan (docker compose up -d)"
+      exit 0
+      ;;
+  esac
+done
+
+echo "Démarrage de PaperClip (Docker Compose)…”
+echo "Fichier Compose: $COMPOSE_FILE"
+echo ""
+
+docker compose -f "$COMPOSE_FILE" up $BUILD $DETACH
+
+if [[ -n "$DETACH" ]]; then
+  echo ""
+  echo "Application démarrée en arrière-plan."
+  echo "  API + UI : http://localhost:3100"
+  echo "  Logs     : docker compose -f $COMPOSE_FILE logs -f"
+  echo "  Arrêt    : docker compose -f $COMPOSE_FILE down"
+fi
